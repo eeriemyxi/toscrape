@@ -92,23 +92,15 @@ pub fn fetch_book(book_url: &str) -> Option<BookDetails> {
     let html = Html::parse_document(&body);
     let root = html.root_element();
 
-    let thumbnail_el = select_first_element(root, "img.thumbnail".to_string())?;
-
+    let thumbnail_el =
+        select_first_element(root, "div#product_gallery .thumbnail img".to_string())?;
     let thumbnail_link = url.join(thumbnail_el.attr("src")?.trim()).ok()?.to_string();
 
-    let title = thumbnail_el.attr("alt").unwrap().trim().to_string();
-
-    let page_link = url
-        .join(
-            select_first_element(root, "h3 > a".to_string())?
-                .attr("href")
-                .unwrap()
-                .trim(),
-        )
-        .ok()?
-        .to_string();
-
     let product_main_el = select_first_element(root, "div.product_main".to_string())?;
+
+    let title = String::from_iter(select_first_element(product_main_el, "h1".to_string())?.text());
+
+    let page_link = book_url.to_string();
 
     let rating: Rating = select_first_element(product_main_el, "p.star-rating".to_string())?
         .attr("class")?
