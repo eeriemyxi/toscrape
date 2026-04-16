@@ -1,5 +1,5 @@
 use core::f64;
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap};
 
 use scraper::{Html, Selector};
 use url::Url;
@@ -7,26 +7,11 @@ use url::Url;
 use super::{
     CURRENCY_SYMBOL, Rating,
     fetching::fetch_page,
+    enums::ProductType,
     helpers::{StockParseExt, select_first_element},
     stock_regex,
 };
 
-#[derive(Debug)]
-/// Enum for product types supported by source.
-pub enum ProductType {
-    Book,
-}
-
-impl FromStr for ProductType {
-    type Err = ();
-
-    fn from_str(input: &str) -> Result<ProductType, Self::Err> {
-        match input {
-            "Books" => Ok(ProductType::Book),
-            _ => Err(()),
-        }
-    }
-}
 
 #[derive(Debug)]
 /// Details about a book product.

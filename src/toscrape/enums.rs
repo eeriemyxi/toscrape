@@ -24,3 +24,20 @@ impl FromStr for Rating {
         }
     }
 }
+
+#[derive(Debug)]
+/// Enum for product types supported by source.
+pub enum ProductType {
+    Book,
+}
+
+impl FromStr for ProductType {
+    type Err = ();
+
+    fn from_str(input: &str) -> Result<ProductType, Self::Err> {
+        match input {
+            "Books" => Ok(ProductType::Book),
+            _ => Err(()),
+        }
+    }
+}
