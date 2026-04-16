@@ -15,3 +15,52 @@ cargo add --git https://github.com/eeriemyxi/toscrape.git
 ```
 
 ... You could add it as a dependency as shown above.
+
+## Examples
+#### Fetch a specific book
+```rust
+use toscrape::toscrape;
+
+fn main() {
+    dbg!(toscrape::fetch_book(
+        "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html"
+    ));
+}
+```
+
+#### Paginate through a particular category
+```rust
+use toscrape::toscrape;
+
+fn main() {
+    dbg!(
+        toscrape::paginate_category(
+            "https://books.toscrape.com/catalogue/category/books/historical_42/index.html"
+        )
+        .collect::<Vec<_>>()
+    );
+}
+```
+You could do:
+```rust
+for ... in toscrape::paginate_category("...").page(2) { ... }
+```
+
+To paginate from a particular page number.
+
+#### Fetch and iterate all categories, then iterate every page, and then iterate every card in each page
+```rust
+use toscrape::toscrape;
+
+fn main() {
+    for category in toscrape::fetch_categories().unwrap() {
+        dbg!(&category);
+        for cards in category.pages() {
+            for book in cards {
+                dbg!(&book);
+                dbg!(&book.full());
+            }
+        }
+    }
+}
+```
