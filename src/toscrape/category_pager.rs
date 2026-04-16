@@ -104,6 +104,6 @@ impl Iterator for BookCategoryPager {
 }
 
 /// Paginate product cards via category URL. See [BookCategoryPager::page] to optionally set the page.
-pub fn paginate_category(category_url: &str) -> BookCategoryPager{
+pub fn paginate_category(category_url: &str) -> BookCategoryPager {
     BookCategoryPager::new(category_url)
 }

@@ -37,4 +37,3 @@ pub fn fetch_categories() -> Option<Vec<BookCategory>> {
 
     Some(categories)
 }
-

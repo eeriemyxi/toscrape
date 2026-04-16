@@ -5,26 +5,11 @@ use scraper::{Html, Selector};
 use url::Url;
 
 use super::{
-    CURRENCY_SYMBOL, Rating, stock_regex, fetching::fetch_page,
+    CURRENCY_SYMBOL, Rating,
+    fetching::fetch_page,
     helpers::{StockParseExt, select_first_element},
+    stock_regex,
 };
-
-#[derive(Debug)]
-/// The information scraped from a product card.
-pub struct BookCard {
-    /// The link to the dedicated page.
-    pub page_link: String,
-    /// The link to the thumbnail image.
-    pub thumbnail_link: String,
-    /// The title for the product.
-    pub title: String,
-    /// The rating for the product.
-    pub rating: Rating,
-    /// The price for the product.
-    pub price: f64,
-    /// Whether the product is in stock or not. So far only items in stock have been observed, thus the parsing is only partially tested.
-    pub in_stock: bool,
-}
 
 #[derive(Debug)]
 /// Enum for product types supported by source.
@@ -70,6 +55,23 @@ pub struct BookDetails {
     pub stock_count: u64,
     /// The amount of reviews on this product. The review data is unavailable from source.
     pub reviews_count: u64,
+}
+
+#[derive(Debug)]
+/// The information scraped from a product card.
+pub struct BookCard {
+    /// The link to the dedicated page.
+    pub page_link: String,
+    /// The link to the thumbnail image.
+    pub thumbnail_link: String,
+    /// The title for the product.
+    pub title: String,
+    /// The rating for the product.
+    pub rating: Rating,
+    /// The price for the product.
+    pub price: f64,
+    /// Whether the product is in stock or not. So far only items in stock have been observed, thus the parsing is only partially tested.
+    pub in_stock: bool,
 }
 
 impl BookCard {
