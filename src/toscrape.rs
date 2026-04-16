@@ -1,20 +1,16 @@
 pub(crate) mod book_category;
 pub(crate) mod book_info;
 pub(crate) mod category_pager;
+pub(crate) mod enums;
 pub(crate) mod fetching;
 pub(crate) mod helpers;
-pub(crate) mod enums;
-
-use lazy_regex::{Lazy, Regex, regex};
+pub(crate) mod regexes;
+pub(crate) mod selectors;
 
 pub use book_category::{BookCategory, fetch_categories};
 pub use book_info::{BookCard, BookDetails, fetch_book};
 pub use category_pager::{BookCategoryPager, paginate_category};
-pub use enums::{Rating, ProductType};
-
-pub(crate) fn stock_regex() -> &'static Lazy<Regex> {
-    regex!(r"(?<aval>In stock|Out of stock)(?: \((?<count>\d+) available\))?")
-}
+pub use enums::{ProductType, Rating};
 
 /// The origin URL. Hardly useful but available.
 pub const ORIGIN_URL: &str = "https://books.toscrape.com/";

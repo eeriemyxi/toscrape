@@ -1,10 +1,9 @@
+use crate::toscrape::selectors;
+
 use super::{
-    CURRENCY_SYMBOL, Rating,
-    book_info::BookCard,
-    fetching::fetch_page,
-    helpers::{StockParseExt, select_first_element},
+    CURRENCY_SYMBOL, Rating, book_info::BookCard, fetching::fetch_page, helpers::StockParseExt,
 };
-use scraper::{Html, Selector};
+use scraper::Html;
 use url::Url;
 
 /// Paginator for the product cards of a category.
@@ -48,10 +47,8 @@ impl Iterator for BookCategoryPager {
             return None;
         }
 
-        for el in Html::parse_document(&body)
-            .select(&Selector::parse("div > ol.row > li > article.product_pod").ok()?)
-        {
-            let thumbnail_el = select_first_element(el, "img.thumbnail".to_string())?;
+        for el in Html::parse_document(&body).select(selectors::card()) {
+            let thumbnail_el = el.select(selectors::card_thumbnail()).nth(0)?;
 
             let thumbnail_link = url.join(thumbnail_el.attr("src")?.trim()).ok()?.to_string();
 
@@ -59,7 +56,8 @@ impl Iterator for BookCategoryPager {
 
             let page_link = url
                 .join(
-                    select_first_element(el, "h3 > a".to_string())?
+                    el.select(selectors::card_link())
+                        .nth(0)?
                         .attr("href")
                         .unwrap()
                         .trim(),
@@ -67,24 +65,24 @@ impl Iterator for BookCategoryPager {
                 .ok()?
                 .to_string();
 
-            let rating: Rating = select_first_element(el, "p.star-rating".to_string())?
+            let rating: Rating = el
+                .select(selectors::product_rating())
+                .nth(0)?
                 .attr("class")?
                 .split_ascii_whitespace()
                 .last()?
                 .parse()
                 .ok()?;
 
-            let price: f64 =
-                String::from_iter(select_first_element(el, "p.price_color".to_string())?.text())
-                    .trim()
-                    .trim_start_matches(CURRENCY_SYMBOL)
-                    .parse()
-                    .ok()?;
+            let price: f64 = String::from_iter(el.select(selectors::card_price()).nth(0)?.text())
+                .trim()
+                .trim_start_matches(CURRENCY_SYMBOL)
+                .parse()
+                .ok()?;
 
-            let stock_raw =
-                String::from_iter(select_first_element(el, "p.availability".to_string())?.text())
-                    .trim()
-                    .to_string();
+            let stock_raw = String::from_iter(el.select(selectors::product_stock()).nth(0)?.text())
+                .trim()
+                .to_string();
 
             let in_stock = stock_raw.as_str().parse_stock();
 

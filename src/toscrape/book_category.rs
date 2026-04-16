@@ -1,7 +1,7 @@
-use scraper::{Html, Selector};
+use scraper::Html;
 use url::Url;
 
-use super::{ORIGIN_URL, category_pager::BookCategoryPager, fetching::fetch_page};
+use super::{ORIGIN_URL, category_pager::BookCategoryPager, fetching::fetch_page, selectors};
 
 #[derive(Debug)]
 /// Information regarding a book category.
@@ -24,9 +24,7 @@ pub fn fetch_categories() -> Option<Vec<BookCategory>> {
     let mut categories: Vec<BookCategory> = vec![];
     let url = Url::parse(ORIGIN_URL).ok()?;
     let (_, body) = fetch_page(url.as_str()).ok()?;
-    for el in
-        Html::parse_document(&body).select(&Selector::parse(".nav-list > li > ul > li > a").ok()?)
-    {
+    for el in Html::parse_document(&body).select(selectors::nav_list()) {
         let label = String::from_iter(el.text()).trim().to_string();
 
         categories.push(BookCategory {

@@ -1,17 +1,17 @@
 use core::f64;
-use std::{collections::HashMap};
+use std::collections::HashMap;
 
-use scraper::{Html, Selector};
+use scraper::Html;
 use url::Url;
 
 use super::{
     CURRENCY_SYMBOL, Rating,
-    fetching::fetch_page,
     enums::ProductType,
-    helpers::{StockParseExt, select_first_element},
-    stock_regex,
+    fetching::fetch_page,
+    helpers::StockParseExt,
+    regexes::stock_regex,
+    selectors::{self},
 };
-
 
 #[derive(Debug)]
 /// Details about a book product.
@@ -77,17 +77,23 @@ pub fn fetch_book(book_url: &str) -> Option<BookDetails> {
     let html = Html::parse_document(&body);
     let root = html.root_element();
 
-    let thumbnail_el =
-        select_first_element(root, "div#product_gallery .thumbnail img".to_string())?;
+    let thumbnail_el = root.select(selectors::product_thumbnail()).next()?;
     let thumbnail_link = url.join(thumbnail_el.attr("src")?.trim()).ok()?.to_string();
 
-    let product_main_el = select_first_element(root, "div.product_main".to_string())?;
+    let product_main_el = root.select(selectors::product_main()).next()?;
 
-    let title = String::from_iter(select_first_element(product_main_el, "h1".to_string())?.text());
+    let title = String::from_iter(
+        product_main_el
+            .select(selectors::product_title())
+            .next()?
+            .text(),
+    );
 
     let page_link = book_url.to_string();
 
-    let rating: Rating = select_first_element(product_main_el, "p.star-rating".to_string())?
+    let rating: Rating = product_main_el
+        .select(selectors::product_rating())
+        .next()?
         .attr("class")?
         .split_ascii_whitespace()
         .last()?
@@ -95,7 +101,10 @@ pub fn fetch_book(book_url: &str) -> Option<BookDetails> {
         .ok()?;
 
     let stock_raw = String::from_iter(
-        select_first_element(product_main_el, "p.availability".to_string())?.text(),
+        product_main_el
+            .select(selectors::product_stock())
+            .next()?
+            .text(),
     )
     .trim()
     .to_string();
@@ -106,14 +115,13 @@ pub fn fetch_book(book_url: &str) -> Option<BookDetails> {
 
     let stock_count = stock_capt["count"].parse::<u64>().ok()?;
 
-    let description = String::from_iter(
-        select_first_element(root, "div#product_description + p".to_string())?.text(),
-    );
+    let description =
+        String::from_iter(root.select(selectors::product_description()).next()?.text());
 
     let mut table: HashMap<String, String> = HashMap::new();
-    for el in root.select(&Selector::parse(".sub-header + table tr").ok()?) {
-        let head = String::from_iter(select_first_element(el, "th".to_string())?.text());
-        let def = String::from_iter(select_first_element(el, "td".to_string())?.text());
+    for el in root.select(selectors::product_info_table()) {
+        let head = String::from_iter(el.select(selectors::table_head()).next()?.text());
+        let def = String::from_iter(el.select(selectors::table_def()).next()?.text());
         table.insert(head, def);
     }
 
