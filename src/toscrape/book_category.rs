@@ -17,7 +17,7 @@ pub struct BookCategory {
 
 impl BookCategory {
     /// Get a paginator for products.
-    pub fn pages(self) -> BookCategoryPager {
+    pub fn pages(self) -> Result<BookCategoryPager, ScraperError> {
         BookCategoryPager::new(self.url)
     }
 }

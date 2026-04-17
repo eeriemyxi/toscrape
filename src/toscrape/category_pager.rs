@@ -9,17 +9,21 @@ use url::Url;
 /// Paginator for the product cards of a category.
 pub struct BookCategoryPager {
     /// The link to the category.
-    url: String,
+    url: Url,
     /// The page to paginate. This property will change when iterated.
     page: u32,
 }
 
 impl BookCategoryPager {
-    pub fn new(url: impl Into<String>) -> Self {
-        Self {
-            url: url.into(),
+    pub fn new(url: impl ToString) -> Result<Self, ScraperError> {
+        Ok(Self {
+            url: Url::parse(&url.to_string()).map_err(|e| ScraperError::InvalidURL {
+                url: url.to_string(),
+                second: None,
+                source: Box::new(e),
+            })?,
             page: 0,
-        }
+        })
     }
 
     /// Set the active page. Could be used to paginate from a certain number.
@@ -30,21 +34,14 @@ impl BookCategoryPager {
 
     fn fetch_next_page(
         &self,
-        page_url: impl Into<String> + std::string::ToString,
+        page_url: &str,
     ) -> Result<Vec<BookCard>, ScraperError> {
         let mut books = vec![];
 
-        let url =
-            Url::parse(page_url.to_string().as_str()).map_err(|e| ScraperError::InvalidURL {
-                url: page_url.into(),
-                second: None,
-                source: Box::new(e),
-            })?;
-
-        let (curl, body) = fetch_page(url.as_str())?;
+        let (curl, body) = fetch_page(page_url)?;
         if curl.response_code()? == 404 {
             return Err(ScraperError::PageNotFound {
-                url: url.to_string(),
+                url: self.url.to_string(),
             });
         }
 
@@ -63,10 +60,10 @@ impl BookCategoryPager {
                 })?
                 .trim();
 
-            let thumbnail_link = url
+            let thumbnail_link = self.url
                 .join(thumbnail_src)
                 .map_err(|e| ScraperError::InvalidURL {
-                    url: url.to_string(),
+                    url: self.url.to_string(),
                     second: Some(thumbnail_src.to_string()),
                     source: Box::new(e),
                 })?
@@ -92,10 +89,10 @@ impl BookCategoryPager {
                 })?
                 .trim();
 
-            let page_link = url
+            let page_link = self.url
                 .join(card_link)
                 .map_err(|e| ScraperError::InvalidURL {
-                    url: url.to_string(),
+                    url: self.url.to_string(),
                     second: Some(card_link.to_string()),
                     source: Box::new(e),
                 })?
@@ -169,11 +166,11 @@ impl Iterator for BookCategoryPager {
     type Item = Result<Vec<BookCard>, ScraperError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut url = match Url::parse(&self.url) {
+        let mut url = match Url::parse(self.url.as_ref()) {
             Ok(u) => u,
             Err(e) => {
                 return Some(Err(ScraperError::InvalidURL {
-                    url: self.url.clone(),
+                    url: self.url.to_string(),
                     second: None,
                     source: Box::new(e),
                 }));
@@ -185,7 +182,7 @@ impl Iterator for BookCategoryPager {
                 Ok(s) => s,
                 Err(_) => {
                     return Some(Err(ScraperError::InvalidURL {
-                        url: self.url.clone(),
+                        url: self.url.to_string(),
                         second: None,
                         source: "URL didn't have enough path segments".into(),
                     }));
@@ -196,7 +193,7 @@ impl Iterator for BookCategoryPager {
                 .push(format!("page-{}.html", self.page + 1).as_str());
         }
 
-        let result = self.fetch_next_page(url);
+        let result = self.fetch_next_page(url.as_str());
 
         match result {
             Err(ScraperError::PageNotFound { url: _ }) => None,
@@ -209,6 +206,6 @@ impl Iterator for BookCategoryPager {
 }
 
 /// Paginate product cards via category URL. See [BookCategoryPager::page] to optionally set the page.
-pub fn paginate_category(category_url: &str) -> BookCategoryPager {
+pub fn paginate_category(category_url: &str) -> Result<BookCategoryPager, ScraperError> {
     BookCategoryPager::new(category_url)
 }
