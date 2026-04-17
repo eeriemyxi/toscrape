@@ -18,19 +18,22 @@ pub struct BookCategory {
 impl BookCategory {
     /// Get a paginator for products.
     pub fn paginate(self) -> Result<BookCategoryPager, ScraperError> {
-        BookCategoryPager::new(self.url)
+        BookCategoryPager::new(&self.url)
     }
 }
 
 /// Fetch the currently available categories from source.
 pub fn fetch_categories() -> Result<Vec<BookCategory>, ScraperError> {
     let mut categories: Vec<BookCategory> = vec![];
+
     let url = Url::parse(ORIGIN_URL).map_err(|e| ScraperError::InvalidURL {
         url: ORIGIN_URL.to_string(),
         second: None,
         source: Box::new(e),
     })?;
+
     let (_, body) = fetch_page(url.as_str())?;
+
     for el in Html::parse_document(&body).select(selectors::nav_list()) {
         let label = String::from_iter(el.text()).trim().to_string();
 

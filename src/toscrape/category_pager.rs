@@ -18,9 +18,9 @@ pub struct BookCategoryPager {
 }
 
 impl BookCategoryPager {
-    pub fn new(url: impl ToString) -> Result<Self, ScraperError> {
+    pub fn new(url: &str) -> Result<Self, ScraperError> {
         Ok(Self {
-            url: Url::parse(&url.to_string()).map_err(|e| ScraperError::InvalidURL {
+            url: Url::parse(url).map_err(|e| ScraperError::InvalidURL {
                 url: url.to_string(),
                 second: None,
                 source: Box::new(e),
@@ -173,17 +173,7 @@ impl Iterator for BookCategoryPager {
             return Some(Ok(book));
         }
 
-        let mut url = match Url::parse(self.url.as_ref()) {
-            Ok(u) => u,
-            Err(e) => {
-                return Some(Err(ScraperError::InvalidURL {
-                    url: self.url.to_string(),
-                    second: None,
-                    source: Box::new(e),
-                }));
-            }
-        };
-
+        let mut url = self.url.clone();
         if self.page > 0 {
             let mut segments = match url.path_segments_mut() {
                 Ok(s) => s,
@@ -195,9 +185,7 @@ impl Iterator for BookCategoryPager {
                     }));
                 }
             };
-            segments
-                .pop()
-                .push(format!("page-{}.html", self.page + 1).as_str());
+            segments.pop().push(&format!("page-{}.html", self.page + 1));
         }
 
         let result = self.fetch_next_page(url.as_str());
