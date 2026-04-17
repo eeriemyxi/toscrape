@@ -5,7 +5,6 @@ edition = "2024"
 
 [dependencies]
 hyprcurl = "0.1.0"
-lazy-regex = "3.6.0"
 regex = "1.12.3"
 scraper = "0.26.0"
 thiserror = "2.0.18"
