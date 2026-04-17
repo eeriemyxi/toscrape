@@ -1,8 +1,7 @@
-use crate::toscrape::selectors;
+use crate::toscrape::{enums::Stock, selectors};
 
 use super::{
     CURRENCY_SYMBOL, Rating, book_info::BookCard, errors::ScraperError, fetching::fetch_page,
-    helpers::StockParseExt,
 };
 use scraper::Html;
 use url::Url;
@@ -150,14 +149,15 @@ impl BookCategoryPager {
                 .text()
                 .collect::<String>();
 
-            let in_stock = stock_raw.trim().parse_stock();
+            let stock = stock_raw.parse::<Stock>()?;
+
             books.push(BookCard {
                 thumbnail_link,
                 title,
                 page_link,
                 rating,
                 price,
-                in_stock,
+                stock,
             })
         }
 

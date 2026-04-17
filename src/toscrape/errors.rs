@@ -27,4 +27,7 @@ pub enum ScraperError {
     /// Couldn't convert input to a [ProductType](crate::toscrape::enums::ProductType)
     #[error("couldn't convert {input} to ProductType")]
     InvalidProductType { input: String },
+    /// Couldn't convert input to a [ProductType](crate::toscrape::enums::Stock)
+    #[error("couldn't convert {input} to Stock")]
+    InvalidStock { input: String },
 }

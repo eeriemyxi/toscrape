@@ -6,11 +6,9 @@ use url::Url;
 
 use super::{
     CURRENCY_SYMBOL, Rating,
-    enums::ProductType,
+    enums::{ProductType, Stock},
     errors::ScraperError,
     fetching::fetch_page,
-    helpers::StockParseExt,
-    regexes::stock_regex,
     selectors::{self},
 };
 
@@ -25,8 +23,10 @@ pub struct BookDetails {
     pub title: String,
     /// The rating for the product.
     pub rating: Rating,
-    /// Whether the product is in stock or not. So far only items in stock have been observed, thus the parsing is only partially tested.
-    pub in_stock: bool,
+    /// Availabality of the product.
+    /// > **Note:**
+    /// > So far only items in stock have been observed, thus the parsing is only partially tested.
+    pub stock: Stock,
     /// The "UPC" information from product details.
     pub upc: String,
     /// The product type. So far only [ProductType::Book] has been observed.
@@ -37,8 +37,6 @@ pub struct BookDetails {
     pub price: f64,
     /// The tax amount of the product.
     pub tax: f64,
-    /// The amount of stocks that are available.
-    pub stock_count: u64,
     /// The amount of reviews on this product. The review data is unavailable from source.
     pub reviews_count: u64,
 }
@@ -56,8 +54,14 @@ pub struct BookCard {
     pub rating: Rating,
     /// The price for the product.
     pub price: f64,
-    /// Whether the product is in stock or not. So far only items in stock have been observed, thus the parsing is only partially tested.
-    pub in_stock: bool,
+    /// Availability of the product.
+    ///
+    /// > **Note:**
+    /// > So far only items in stock have been observed, thus the parsing is only partially tested.
+    ///
+    /// > **Note**:
+    /// > [Stock::InStock::count] is always [None] because the data is unavailable in the card. You have to use [BookCard::full] or [fetch_book] to get that information from [BookDetails::stock].
+    pub stock: Stock,
 }
 
 impl BookCard {
@@ -153,21 +157,7 @@ pub fn fetch_book(book_url: &str) -> Result<BookDetails, ScraperError> {
     .trim()
     .to_string();
 
-    let stock_capt =
-        stock_regex()
-            .captures(&stock_raw)
-            .ok_or_else(|| ScraperError::InvalidScraping {
-                reason: format!("Couldn't find any regex captures for {:?}", stock_raw).to_string(),
-            })?;
-
-    let in_stock = stock_capt["aval"].parse_stock();
-
-    let stock_count =
-        stock_capt["count"]
-            .parse::<u64>()
-            .map_err(|_| ScraperError::InvalidScraping {
-                reason: format!("coudn't convert {:?} to u64", &stock_capt["count"]),
-            })?;
+    let stock = stock_raw.parse::<Stock>()?;
 
     let description = String::from_iter(
         root.select(selectors::product_description())
@@ -252,10 +242,9 @@ pub fn fetch_book(book_url: &str) -> Result<BookDetails, ScraperError> {
         upc,
         price,
         tax,
-        stock_count,
+        stock,
         reviews_count,
         product_type,
-        in_stock,
         page_link,
         rating,
         title,
