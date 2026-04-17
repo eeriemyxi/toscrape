@@ -1,87 +1,33 @@
 use scraper::Selector;
 use std::sync::LazyLock;
 
+macro_rules! create_selector {
+    ($name:ident, $select:expr) => {
+        pub(crate) fn $name() -> &'static LazyLock<Selector> {
+            static SELECTOR: LazyLock<Selector> =
+                LazyLock::new(|| Selector::parse($select).unwrap());
+            &SELECTOR
+        }
+    };
+}
+
 // Generic selectors
 
-pub(crate) fn table_head() -> &'static LazyLock<Selector> {
-    static SELECTOR: LazyLock<Selector> = LazyLock::new(|| Selector::parse("th").unwrap());
-    &SELECTOR
-}
-
-pub(crate) fn table_def() -> &'static LazyLock<Selector> {
-    static SELECTOR: LazyLock<Selector> = LazyLock::new(|| Selector::parse("td").unwrap());
-    &SELECTOR
-}
+create_selector!(table_head, "th");
+create_selector!(table_def, "td");
 
 // Category selectors
-pub(crate) fn card() -> &'static LazyLock<Selector> {
-    static SELECTOR: LazyLock<Selector> =
-        LazyLock::new(|| Selector::parse("div > ol.row > li > article.product_pod").unwrap());
-    &SELECTOR
-}
-
-pub(crate) fn card_thumbnail() -> &'static LazyLock<Selector> {
-    static SELECTOR: LazyLock<Selector> =
-        LazyLock::new(|| Selector::parse("img.thumbnail").unwrap());
-    &SELECTOR
-}
-
-pub(crate) fn card_link() -> &'static LazyLock<Selector> {
-    static SELECTOR: LazyLock<Selector> = LazyLock::new(|| Selector::parse("h3 > a").unwrap());
-    &SELECTOR
-}
-
-pub(crate) fn card_price() -> &'static LazyLock<Selector> {
-    static SELECTOR: LazyLock<Selector> =
-        LazyLock::new(|| Selector::parse("p.price_color").unwrap());
-    &SELECTOR
-}
+create_selector!(card, "div > ol.row > li > article.product_pod");
+create_selector!(card_thumbnail, "img.thumbnail");
+create_selector!(card_link, "h3 > a");
+create_selector!(card_price, "p.price_color");
 
 // Dedicated book page selectors
-
-pub(crate) fn nav_list() -> &'static LazyLock<Selector> {
-    static SELECTOR: LazyLock<Selector> =
-        LazyLock::new(|| Selector::parse(".nav-list > li > ul > li > a").unwrap());
-    &SELECTOR
-}
-
-pub(crate) fn product_thumbnail() -> &'static LazyLock<Selector> {
-    static SELECTOR: LazyLock<Selector> =
-        LazyLock::new(|| Selector::parse("div#product_gallery .thumbnail img").unwrap());
-    &SELECTOR
-}
-
-pub(crate) fn product_main() -> &'static LazyLock<Selector> {
-    static SELECTOR: LazyLock<Selector> =
-        LazyLock::new(|| Selector::parse("div.product_main").unwrap());
-    &SELECTOR
-}
-
-pub(crate) fn product_title() -> &'static LazyLock<Selector> {
-    static SELECTOR: LazyLock<Selector> = LazyLock::new(|| Selector::parse("h1").unwrap());
-    &SELECTOR
-}
-
-pub(crate) fn product_rating() -> &'static LazyLock<Selector> {
-    static SELECTOR: LazyLock<Selector> =
-        LazyLock::new(|| Selector::parse("p.star-rating").unwrap());
-    &SELECTOR
-}
-
-pub(crate) fn product_stock() -> &'static LazyLock<Selector> {
-    static SELECTOR: LazyLock<Selector> =
-        LazyLock::new(|| Selector::parse("p.availability").unwrap());
-    &SELECTOR
-}
-
-pub(crate) fn product_description() -> &'static LazyLock<Selector> {
-    static SELECTOR: LazyLock<Selector> =
-        LazyLock::new(|| Selector::parse("div#product_description + p").unwrap());
-    &SELECTOR
-}
-
-pub(crate) fn product_info_table() -> &'static LazyLock<Selector> {
-    static SELECTOR: LazyLock<Selector> =
-        LazyLock::new(|| Selector::parse(".sub-header + table tr").unwrap());
-    &SELECTOR
-}
+create_selector!(nav_list, ".nav-list > li > ul > li > a");
+create_selector!(product_thumbnail, "div#product_gallery .thumbnail img");
+create_selector!(product_main, "div.product_main");
+create_selector!(product_title, "h1");
+create_selector!(product_rating, "p.star-rating");
+create_selector!(product_stock, "p.availability");
+create_selector!(product_description, "div#product_description + p");
+create_selector!(product_info_table, ".sub-header + table tr");
