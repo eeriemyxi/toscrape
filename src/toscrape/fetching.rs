@@ -1,7 +1,6 @@
-use hyprcurl::{Browser, Curl};
-use std::error::Error;
+use hyprcurl::{Browser, Curl, CurlError};
 
-pub(crate) fn fetch_page(url: &str) -> Result<(Curl, String), Box<dyn Error>> {
+pub(crate) fn fetch_page(url: &str) -> Result<(Curl, String), CurlError> {
     let mut curl = Curl::new()?;
     let mut buffer = Vec::new();
 

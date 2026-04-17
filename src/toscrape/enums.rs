@@ -1,5 +1,7 @@
 use std::str::FromStr;
 
+use super::errors::ScraperError;
+
 #[derive(Debug)]
 /// The rating for a product.
 pub enum Rating {
@@ -11,7 +13,7 @@ pub enum Rating {
 }
 
 impl FromStr for Rating {
-    type Err = ();
+    type Err = ScraperError;
 
     fn from_str(input: &str) -> Result<Rating, Self::Err> {
         match input {
@@ -20,7 +22,9 @@ impl FromStr for Rating {
             "Three" => Ok(Rating::Three),
             "Four" => Ok(Rating::Four),
             "Five" => Ok(Rating::Five),
-            _ => Err(()),
+            _ => Err(ScraperError::InvalidRating {
+                input: input.to_string(),
+            }),
         }
     }
 }
@@ -32,12 +36,14 @@ pub enum ProductType {
 }
 
 impl FromStr for ProductType {
-    type Err = ();
+    type Err = ScraperError;
 
     fn from_str(input: &str) -> Result<ProductType, Self::Err> {
         match input {
             "Books" => Ok(ProductType::Book),
-            _ => Err(()),
+            _ => Err(ScraperError::InvalidProductType {
+                input: input.to_string(),
+            }),
         }
     }
 }

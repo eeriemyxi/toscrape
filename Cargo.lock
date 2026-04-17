@@ -842,6 +842,7 @@ dependencies = [
  "lazy-regex",
  "regex",
  "scraper",
+ "thiserror 2.0.18",
  "url",
 ]
 

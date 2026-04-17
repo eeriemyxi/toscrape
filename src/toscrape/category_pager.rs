@@ -1,7 +1,8 @@
 use crate::toscrape::selectors;
 
 use super::{
-    CURRENCY_SYMBOL, Rating, book_info::BookCard, fetching::fetch_page, helpers::StockParseExt,
+    CURRENCY_SYMBOL, Rating, book_info::BookCard, errors::ScraperError, fetching::fetch_page,
+    helpers::StockParseExt,
 };
 use scraper::Html;
 use url::Url;
@@ -27,65 +28,129 @@ impl BookCategoryPager {
         self.page = page;
         self
     }
-}
 
-impl Iterator for BookCategoryPager {
-    type Item = Vec<BookCard>;
-
-    fn next(&mut self) -> Option<Self::Item> {
+    fn fetch_next_page(
+        &self,
+        page_url: impl Into<String> + std::string::ToString,
+    ) -> Result<Vec<BookCard>, ScraperError> {
         let mut books = vec![];
-        let mut url = Url::parse(&self.url).unwrap();
-        if self.page > 0 {
-            url.path_segments_mut()
-                .ok()?
-                .pop()
-                .push(format!("page-{}.html", self.page + 1).as_str());
-        }
 
-        let (curl, body) = fetch_page(url.clone().as_str()).ok()?;
-        if curl.response_code().ok()? != 200 {
-            return None;
+        let url =
+            Url::parse(page_url.to_string().as_str()).map_err(|e| ScraperError::InvalidURL {
+                url: page_url.into(),
+                second: None,
+                source: Box::new(e),
+            })?;
+
+        let (curl, body) = fetch_page(url.as_str())?;
+        if curl.response_code()? == 404 {
+            return Err(ScraperError::PageNotFound {
+                url: url.to_string(),
+            });
         }
 
         for el in Html::parse_document(&body).select(selectors::card()) {
-            let thumbnail_el = el.select(selectors::card_thumbnail()).nth(0)?;
+            let thumbnail_el = el
+                .select(selectors::card_thumbnail())
+                .next()
+                .ok_or_else(|| ScraperError::InvalidScraping {
+                    reason: "couldn't find the thumbnail element".to_string(),
+                })?;
 
-            let thumbnail_link = url.join(thumbnail_el.attr("src")?.trim()).ok()?.to_string();
+            let thumbnail_src = thumbnail_el
+                .attr("src")
+                .ok_or_else(|| ScraperError::InvalidScraping {
+                    reason: "couldn't find the thumbnail's `src` attribute".to_string(),
+                })?
+                .trim();
 
-            let title = thumbnail_el.attr("alt").unwrap().trim().to_string();
-
-            let page_link = url
-                .join(
-                    el.select(selectors::card_link())
-                        .nth(0)?
-                        .attr("href")
-                        .unwrap()
-                        .trim(),
-                )
-                .ok()?
+            let thumbnail_link = url
+                .join(thumbnail_src)
+                .map_err(|e| ScraperError::InvalidURL {
+                    url: url.to_string(),
+                    second: Some(thumbnail_src.to_string()),
+                    source: Box::new(e),
+                })?
                 .to_string();
 
-            let rating: Rating = el
-                .select(selectors::product_rating())
-                .nth(0)?
-                .attr("class")?
-                .split_ascii_whitespace()
-                .last()?
-                .parse()
-                .ok()?;
+            let title = thumbnail_el
+                .attr("alt")
+                .ok_or_else(|| ScraperError::InvalidScraping {
+                    reason: "couldn't find the thumbnail's `alt` attribute".to_string(),
+                })?
+                .trim()
+                .to_string();
 
-            let price: f64 = String::from_iter(el.select(selectors::card_price()).nth(0)?.text())
+            let card_link = el
+                .select(selectors::card_link())
+                .next()
+                .ok_or_else(|| ScraperError::InvalidScraping {
+                    reason: "couldnt't find the card link element".to_string(),
+                })?
+                .attr("href")
+                .ok_or_else(|| ScraperError::InvalidScraping {
+                    reason: "coudn't find `href` attribute in card element".to_string(),
+                })?
+                .trim();
+
+            let page_link = url
+                .join(card_link)
+                .map_err(|e| ScraperError::InvalidURL {
+                    url: url.to_string(),
+                    second: Some(card_link.to_string()),
+                    source: Box::new(e),
+                })?
+                .to_string();
+
+            let rating_class = el
+                .select(selectors::product_rating())
+                .next() // use .next() instead of .nth(0)
+                .ok_or_else(|| ScraperError::InvalidScraping {
+                    reason: "couldn't find rating element".to_string(),
+                })?
+                .attr("class")
+                .ok_or_else(|| ScraperError::InvalidScraping {
+                    reason: "rating element missing class attribute".to_string(),
+                })?;
+
+            let rating: Rating = rating_class
+                .split_ascii_whitespace()
+                .last()
+                .ok_or_else(|| ScraperError::InvalidScraping {
+                    reason: format!("rating class is empty: '{}'", rating_class),
+                })?
+                .parse() // This assumes Rating implements FromStr
+                .map_err(|_| ScraperError::InvalidScraping {
+                    reason: format!("failed to parse rating from class '{}'", rating_class),
+                })?;
+
+            let price_text = el
+                .select(selectors::card_price())
+                .next()
+                .ok_or_else(|| ScraperError::InvalidScraping {
+                    reason: "couldn't find price element".to_string(),
+                })?
+                .text()
+                .collect::<String>();
+
+            let price: f64 = price_text
                 .trim()
                 .trim_start_matches(CURRENCY_SYMBOL)
                 .parse()
-                .ok()?;
+                .map_err(|_| ScraperError::InvalidScraping {
+                    reason: format!("couldn't parse price '{}' as f64", price_text),
+                })?;
 
-            let stock_raw = String::from_iter(el.select(selectors::product_stock()).nth(0)?.text())
-                .trim()
-                .to_string();
+            let stock_raw = el
+                .select(selectors::product_stock())
+                .next()
+                .ok_or_else(|| ScraperError::InvalidScraping {
+                    reason: "couldn't find stock element".to_string(),
+                })?
+                .text()
+                .collect::<String>();
 
-            let in_stock = stock_raw.as_str().parse_stock();
-
+            let in_stock = stock_raw.trim().parse_stock();
             books.push(BookCard {
                 thumbnail_link,
                 title,
@@ -96,8 +161,50 @@ impl Iterator for BookCategoryPager {
             })
         }
 
-        self.page += 1;
-        Some(books)
+        Ok(books)
+    }
+}
+
+impl Iterator for BookCategoryPager {
+    type Item = Result<Vec<BookCard>, ScraperError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut url = match Url::parse(&self.url) {
+            Ok(u) => u,
+            Err(e) => {
+                return Some(Err(ScraperError::InvalidURL {
+                    url: self.url.clone(),
+                    second: None,
+                    source: Box::new(e),
+                }));
+            }
+        };
+
+        if self.page > 0 {
+            let mut segments = match url.path_segments_mut() {
+                Ok(s) => s,
+                Err(_) => {
+                    return Some(Err(ScraperError::InvalidURL {
+                        url: self.url.clone(),
+                        second: None,
+                        source: "URL didn't have enough path segments".into(),
+                    }));
+                }
+            };
+            segments
+                .pop()
+                .push(format!("page-{}.html", self.page + 1).as_str());
+        }
+
+        let result = self.fetch_next_page(url);
+
+        match result {
+            Err(ScraperError::PageNotFound { url: _ }) => None,
+            _ => {
+                self.page += 1;
+                Some(result)
+            }
+        }
     }
 }
 

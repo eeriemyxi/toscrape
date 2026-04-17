@@ -7,6 +7,7 @@ use url::Url;
 use super::{
     CURRENCY_SYMBOL, Rating,
     enums::ProductType,
+    errors::ScraperError,
     fetching::fetch_page,
     helpers::StockParseExt,
     regexes::stock_regex,
@@ -61,31 +62,63 @@ pub struct BookCard {
 
 impl BookCard {
     /// Fetch more details from the dedicated product page. It'll be [None] if any error is encountered.
-    pub fn full(self) -> Option<BookDetails> {
+    pub fn full(self) -> Result<BookDetails, ScraperError> {
         fetch_book(&self.page_link)
     }
 }
 
 /// Fetch details for a book via its dedicated page URL.
-pub fn fetch_book(book_url: &str) -> Option<BookDetails> {
-    let (curl, body) = fetch_page(book_url).ok()?;
-    if curl.response_code().ok()? != 200 {
-        return None;
+pub fn fetch_book(book_url: &str) -> Result<BookDetails, ScraperError> {
+    let (curl, body) = fetch_page(book_url)?;
+    if curl.response_code()? == 404 {
+        return Err(ScraperError::PageNotFound {
+            url: book_url.to_string(),
+        });
     }
 
-    let url = Url::parse(book_url).ok()?;
+    let url = Url::parse(book_url).map_err(|e| ScraperError::InvalidURL {
+        url: book_url.to_string(),
+        second: None,
+        source: Box::new(e),
+    })?;
     let html = Html::parse_document(&body);
     let root = html.root_element();
 
-    let thumbnail_el = root.select(selectors::product_thumbnail()).next()?;
-    let thumbnail_link = url.join(thumbnail_el.attr("src")?.trim()).ok()?.to_string();
+    let thumbnail_el = root
+        .select(selectors::product_thumbnail())
+        .next()
+        .ok_or_else(|| ScraperError::InvalidScraping {
+            reason: "couldn't find the thumbnail element".to_string(),
+        })?;
+    let thumbnail_src = thumbnail_el
+        .attr("src")
+        .ok_or_else(|| ScraperError::InvalidScraping {
+            reason: "couldn't find the thumbnail's `src` attribute".to_string(),
+        })?
+        .trim();
+    let thumbnail_link = url
+        .join(thumbnail_src)
+        .map_err(|e| ScraperError::InvalidURL {
+            url: url.to_string(),
+            second: Some(thumbnail_src.to_string()),
+            source: Box::new(e),
+        })?
+        .to_string();
 
-    let product_main_el = root.select(selectors::product_main()).next()?;
+    let product_main_el = root
+        .select(selectors::product_main())
+        .next()
+        .ok_or_else(|| ScraperError::InvalidScraping {
+            reason: "couldn't find product_main element".to_string(),
+        })?;
 
     let title = String::from_iter(
         product_main_el
             .select(selectors::product_title())
-            .next()?
+            .next()
+            .ok_or_else(|| ScraperError::InvalidScraping {
+                reason: "couldn't find the product title element".to_string(),
+            })?
             .text(),
     );
 
@@ -93,60 +126,128 @@ pub fn fetch_book(book_url: &str) -> Option<BookDetails> {
 
     let rating: Rating = product_main_el
         .select(selectors::product_rating())
-        .next()?
-        .attr("class")?
+        .next()
+        .ok_or_else(|| ScraperError::InvalidScraping {
+            reason: "couldn't find the product rating element".to_string(),
+        })?
+        .attr("class")
+        .ok_or_else(|| ScraperError::InvalidScraping {
+            reason: "couldn't find the `class` element for the product rating element".to_string(),
+        })?
         .split_ascii_whitespace()
-        .last()?
-        .parse()
-        .ok()?;
+        .last()
+        .ok_or_else(|| ScraperError::InvalidScraping {
+            reason: "no classes exist for the product rating element".to_string(),
+        })?
+        .parse()?;
 
     let stock_raw = String::from_iter(
         product_main_el
             .select(selectors::product_stock())
-            .next()?
+            .next()
+            .ok_or_else(|| ScraperError::InvalidScraping {
+                reason: "couldn't find the product stock element".to_string(),
+            })?
             .text(),
     )
     .trim()
     .to_string();
 
-    let stock_capt = stock_regex().captures(&stock_raw)?;
+    let stock_capt =
+        stock_regex()
+            .captures(&stock_raw)
+            .ok_or_else(|| ScraperError::InvalidScraping {
+                reason: format!("Couldn't find any regex captures for {:?}", stock_raw).to_string(),
+            })?;
 
     let in_stock = stock_capt["aval"].parse_stock();
 
-    let stock_count = stock_capt["count"].parse::<u64>().ok()?;
+    let stock_count =
+        stock_capt["count"]
+            .parse::<u64>()
+            .map_err(|_| ScraperError::InvalidScraping {
+                reason: format!("coudn't convert {:?} to u64", &stock_capt["count"]),
+            })?;
 
-    let description =
-        String::from_iter(root.select(selectors::product_description()).next()?.text());
+    let description = String::from_iter(
+        root.select(selectors::product_description())
+            .next()
+            .ok_or_else(|| ScraperError::InvalidScraping {
+                reason: "couldn't find the product description element".to_string(),
+            })?
+            .text(),
+    );
 
     let mut table: HashMap<String, String> = HashMap::new();
     for el in root.select(selectors::product_info_table()) {
-        let head = String::from_iter(el.select(selectors::table_head()).next()?.text());
-        let def = String::from_iter(el.select(selectors::table_def()).next()?.text());
+        let head = String::from_iter(
+            el.select(selectors::table_head())
+                .next()
+                .ok_or_else(|| ScraperError::InvalidScraping {
+                    reason: "couldn't find the table head while trying to find product information"
+                        .to_string(),
+                })?
+                .text(),
+        );
+        let def = String::from_iter(
+            el.select(selectors::table_def())
+                .next()
+                .ok_or_else(|| ScraperError::InvalidScraping {
+                    reason: "couldn't find the table def while trying to find product information"
+                        .to_string(),
+                })?
+                .text(),
+        );
         table.insert(head, def);
     }
 
-    let upc = table.get("UPC")?.clone();
+    macro_rules! use_table {
+        ($table:ident, $key:expr) => {{
+            $table
+                .get($key)
+                .ok_or_else(|| ScraperError::InvalidScraping {
+                    reason: format!(
+                        "couldn't find {:?} in {:?} during product info parsing",
+                        $key, &$table
+                    ),
+                })
+        }};
+    }
 
-    let product_type = (*table.get("Product Type")?).parse::<ProductType>().ok()?;
+    let upc = use_table!(table, "UPC")?.clone();
 
-    let price: f64 = (*table.get("Price (excl. tax)")?)
+    let product_type = use_table!(table, "Product Type")?.parse::<ProductType>()?;
+
+    let price: f64 = use_table!(table, "Price (excl. tax)")?
         .to_string()
         .trim_start_matches(CURRENCY_SYMBOL)
         .parse()
-        .ok()?;
+        .map_err(|_| ScraperError::InvalidScraping {
+            reason: format!(
+                "Couldn't parse price {:?} as f64",
+                use_table!(table, "Price (excl. tax)")
+            ),
+        })?;
 
-    let tax: f64 = (*table.get("Tax")?)
+    let tax: f64 = use_table!(table, "Tax")?
         .to_string()
         .trim_start_matches(CURRENCY_SYMBOL)
         .parse()
-        .ok()?;
+        .map_err(|_| ScraperError::InvalidScraping {
+            reason: format!("Couldn't parse tax {:?} as f64", use_table!(table, "Tax")),
+        })?;
 
-    let reviews_count: u64 = (*table.get("Number of reviews")?)
+    let reviews_count: u64 = use_table!(table, "Number of reviews")?
         .to_string()
         .parse()
-        .ok()?;
+        .map_err(|_| ScraperError::InvalidScraping {
+            reason: format!(
+                "Couldn't parse review count {:?} as u64",
+                use_table!(table, "Number of reviews")
+            ),
+        })?;
 
-    Some(BookDetails {
+    Ok(BookDetails {
         description,
         upc,
         price,
