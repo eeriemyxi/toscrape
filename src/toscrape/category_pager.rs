@@ -5,10 +5,9 @@ use crate::toscrape::{enums::Stock, selectors};
 use super::{
     CURRENCY_SYMBOL, Rating, book_info::BookCard, errors::ScraperError, fetching::fetch_page,
 };
-use scraper::Html;
+use scraper::{ElementRef, Html};
 use url::Url;
 
-/// Paginator for the product cards of a category.
 pub struct BookCategoryPager {
     /// The link to the category.
     url: Url,
@@ -37,8 +36,6 @@ impl BookCategoryPager {
     }
 
     fn fetch_next_page(&self, page_url: &str) -> Result<Vec<BookCard>, ScraperError> {
-        let mut books = vec![];
-
         let (curl, body) = fetch_page(page_url)?;
         if curl.response_code()? == 404 {
             return Err(ScraperError::PageNotFound {
@@ -46,122 +43,125 @@ impl BookCategoryPager {
             });
         }
 
-        for el in Html::parse_document(&body).select(selectors::card()) {
-            let thumbnail_el = el
-                .select(selectors::card_thumbnail())
-                .next()
-                .ok_or_else(|| ScraperError::InvalidScraping {
-                    reason: "couldn't find the thumbnail element".to_string(),
-                })?;
+        Html::parse_document(&body)
+            .select(selectors::card())
+            .map(|el| self.parse_card(el))
+            .collect()
+    }
 
-            let thumbnail_src = thumbnail_el
-                .attr("src")
-                .ok_or_else(|| ScraperError::InvalidScraping {
-                    reason: "couldn't find the thumbnail's `src` attribute".to_string(),
-                })?
-                .trim();
+    fn parse_card(&self, el: ElementRef) -> Result<BookCard, ScraperError> {
+        let thumbnail_el = el
+            .select(selectors::card_thumbnail())
+            .next()
+            .ok_or_else(|| ScraperError::InvalidScraping {
+                reason: "couldn't find the thumbnail element".to_string(),
+            })?;
 
-            let thumbnail_link = self
-                .url
-                .join(thumbnail_src)
-                .map_err(|e| ScraperError::InvalidURL {
-                    url: self.url.to_string(),
-                    second: Some(thumbnail_src.to_string()),
-                    source: Box::new(e),
-                })?
-                .to_string();
+        let thumbnail_src = thumbnail_el
+            .attr("src")
+            .ok_or_else(|| ScraperError::InvalidScraping {
+                reason: "couldn't find the thumbnail's `src` attribute".to_string(),
+            })?
+            .trim();
 
-            let title = thumbnail_el
-                .attr("alt")
-                .ok_or_else(|| ScraperError::InvalidScraping {
-                    reason: "couldn't find the thumbnail's `alt` attribute".to_string(),
-                })?
-                .trim()
-                .to_string();
+        let thumbnail_link = self
+            .url
+            .join(thumbnail_src)
+            .map_err(|e| ScraperError::InvalidURL {
+                url: self.url.to_string(),
+                second: Some(thumbnail_src.to_string()),
+                source: Box::new(e),
+            })?
+            .to_string();
 
-            let card_link = el
-                .select(selectors::card_link())
-                .next()
-                .ok_or_else(|| ScraperError::InvalidScraping {
-                    reason: "couldnt't find the card link element".to_string(),
-                })?
-                .attr("href")
-                .ok_or_else(|| ScraperError::InvalidScraping {
-                    reason: "coudn't find `href` attribute in card element".to_string(),
-                })?
-                .trim();
+        let title = thumbnail_el
+            .attr("alt")
+            .ok_or_else(|| ScraperError::InvalidScraping {
+                reason: "couldn't find the thumbnail's `alt` attribute".to_string(),
+            })?
+            .trim()
+            .to_string();
 
-            let page_link = self
-                .url
-                .join(card_link)
-                .map_err(|e| ScraperError::InvalidURL {
-                    url: self.url.to_string(),
-                    second: Some(card_link.to_string()),
-                    source: Box::new(e),
-                })?
-                .to_string();
+        let card_link = el
+            .select(selectors::card_link())
+            .next()
+            .ok_or_else(|| ScraperError::InvalidScraping {
+                reason: "couldnt't find the card link element".to_string(),
+            })?
+            .attr("href")
+            .ok_or_else(|| ScraperError::InvalidScraping {
+                reason: "coudn't find `href` attribute in card element".to_string(),
+            })?
+            .trim();
 
-            let rating_class = el
-                .select(selectors::product_rating())
-                .next() // use .next() instead of .nth(0)
-                .ok_or_else(|| ScraperError::InvalidScraping {
-                    reason: "couldn't find rating element".to_string(),
-                })?
-                .attr("class")
-                .ok_or_else(|| ScraperError::InvalidScraping {
-                    reason: "rating element missing class attribute".to_string(),
-                })?;
+        let page_link = self
+            .url
+            .join(card_link)
+            .map_err(|e| ScraperError::InvalidURL {
+                url: self.url.to_string(),
+                second: Some(card_link.to_string()),
+                source: Box::new(e),
+            })?
+            .to_string();
 
-            let rating: Rating = rating_class
-                .split_ascii_whitespace()
-                .last()
-                .ok_or_else(|| ScraperError::InvalidScraping {
-                    reason: format!("rating class is empty: '{}'", rating_class),
-                })?
-                .parse() // This assumes Rating implements FromStr
-                .map_err(|_| ScraperError::InvalidScraping {
-                    reason: format!("failed to parse rating from class '{}'", rating_class),
-                })?;
+        let rating_class = el
+            .select(selectors::product_rating())
+            .next() // use .next() instead of .nth(0)
+            .ok_or_else(|| ScraperError::InvalidScraping {
+                reason: "couldn't find rating element".to_string(),
+            })?
+            .attr("class")
+            .ok_or_else(|| ScraperError::InvalidScraping {
+                reason: "rating element missing class attribute".to_string(),
+            })?;
 
-            let price_text = el
-                .select(selectors::card_price())
-                .next()
-                .ok_or_else(|| ScraperError::InvalidScraping {
-                    reason: "couldn't find price element".to_string(),
-                })?
-                .text()
-                .collect::<String>();
+        let rating: Rating = rating_class
+            .split_ascii_whitespace()
+            .last()
+            .ok_or_else(|| ScraperError::InvalidScraping {
+                reason: format!("rating class is empty: '{}'", rating_class),
+            })?
+            .parse() // This assumes Rating implements FromStr
+            .map_err(|_| ScraperError::InvalidScraping {
+                reason: format!("failed to parse rating from class '{}'", rating_class),
+            })?;
 
-            let price: f64 = price_text
-                .trim()
-                .trim_start_matches(CURRENCY_SYMBOL)
-                .parse()
-                .map_err(|_| ScraperError::InvalidScraping {
-                    reason: format!("couldn't parse price '{}' as f64", price_text),
-                })?;
+        let price_text = el
+            .select(selectors::card_price())
+            .next()
+            .ok_or_else(|| ScraperError::InvalidScraping {
+                reason: "couldn't find price element".to_string(),
+            })?
+            .text()
+            .collect::<String>();
 
-            let stock_raw = el
-                .select(selectors::product_stock())
-                .next()
-                .ok_or_else(|| ScraperError::InvalidScraping {
-                    reason: "couldn't find stock element".to_string(),
-                })?
-                .text()
-                .collect::<String>();
+        let price: f64 = price_text
+            .trim()
+            .trim_start_matches(CURRENCY_SYMBOL)
+            .parse()
+            .map_err(|_| ScraperError::InvalidScraping {
+                reason: format!("couldn't parse price '{}' as f64", price_text),
+            })?;
 
-            let stock = stock_raw.parse::<Stock>()?;
+        let stock_raw = el
+            .select(selectors::product_stock())
+            .next()
+            .ok_or_else(|| ScraperError::InvalidScraping {
+                reason: "couldn't find stock element".to_string(),
+            })?
+            .text()
+            .collect::<String>();
 
-            books.push(BookCard {
-                thumbnail_link,
-                title,
-                page_link,
-                rating,
-                price,
-                stock,
-            })
-        }
+        let stock = stock_raw.parse::<Stock>()?;
 
-        Ok(books)
+        Ok(BookCard {
+            thumbnail_link,
+            title,
+            page_link,
+            rating,
+            price,
+            stock,
+        })
     }
 }
 
