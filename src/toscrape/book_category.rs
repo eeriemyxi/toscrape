@@ -35,7 +35,7 @@ pub fn fetch_categories() -> Result<Vec<BookCategory>, ScraperError> {
     let (_, body) = fetch_page(url.as_str())?;
 
     for el in Html::parse_document(&body).select(selectors::nav_list()) {
-        let label = String::from_iter(el.text()).trim().to_string();
+        let label = el.text().collect::<String>().trim().to_string();
 
         categories.push(BookCategory {
             label,

@@ -116,15 +116,14 @@ pub fn fetch_book(book_url: &str) -> Result<BookDetails, ScraperError> {
             reason: "couldn't find product_main element".to_string(),
         })?;
 
-    let title = String::from_iter(
-        product_main_el
-            .select(selectors::product_title())
-            .next()
-            .ok_or_else(|| ScraperError::InvalidScraping {
-                reason: "couldn't find the product title element".to_string(),
-            })?
-            .text(),
-    );
+    let title = product_main_el
+        .select(selectors::product_title())
+        .next()
+        .ok_or_else(|| ScraperError::InvalidScraping {
+            reason: "couldn't find the product title element".to_string(),
+        })?
+        .text()
+        .collect::<String>();
 
     let page_link = book_url.to_string();
 
@@ -145,49 +144,48 @@ pub fn fetch_book(book_url: &str) -> Result<BookDetails, ScraperError> {
         })?
         .parse()?;
 
-    let stock_raw = String::from_iter(
-        product_main_el
-            .select(selectors::product_stock())
-            .next()
-            .ok_or_else(|| ScraperError::InvalidScraping {
-                reason: "couldn't find the product stock element".to_string(),
-            })?
-            .text(),
-    )
-    .trim()
-    .to_string();
+    let stock_raw = product_main_el
+        .select(selectors::product_stock())
+        .next()
+        .ok_or_else(|| ScraperError::InvalidScraping {
+            reason: "couldn't find the product stock element".to_string(),
+        })?
+        .text()
+        .collect::<String>()
+        .trim()
+        .to_string();
 
     let stock = stock_raw.parse::<Stock>()?;
 
-    let description = String::from_iter(
-        root.select(selectors::product_description())
-            .next()
-            .ok_or_else(|| ScraperError::InvalidScraping {
-                reason: "couldn't find the product description element".to_string(),
-            })?
-            .text(),
-    );
+    let description = root
+        .select(selectors::product_description())
+        .next()
+        .ok_or_else(|| ScraperError::InvalidScraping {
+            reason: "couldn't find the product description element".to_string(),
+        })?
+        .text()
+        .collect::<String>();
 
     let mut table: HashMap<String, String> = HashMap::new();
     for el in root.select(selectors::product_info_table()) {
-        let head = String::from_iter(
-            el.select(selectors::table_head())
-                .next()
-                .ok_or_else(|| ScraperError::InvalidScraping {
-                    reason: "couldn't find the table head while trying to find product information"
-                        .to_string(),
-                })?
-                .text(),
-        );
-        let def = String::from_iter(
-            el.select(selectors::table_def())
-                .next()
-                .ok_or_else(|| ScraperError::InvalidScraping {
-                    reason: "couldn't find the table def while trying to find product information"
-                        .to_string(),
-                })?
-                .text(),
-        );
+        let head = el
+            .select(selectors::table_head())
+            .next()
+            .ok_or_else(|| ScraperError::InvalidScraping {
+                reason: "couldn't find the table head while trying to find product information"
+                    .to_string(),
+            })?
+            .text()
+            .collect::<String>();
+        let def = el
+            .select(selectors::table_def())
+            .next()
+            .ok_or_else(|| ScraperError::InvalidScraping {
+                reason: "couldn't find the table def while trying to find product information"
+                    .to_string(),
+            })?
+            .text()
+            .collect::<String>();
         table.insert(head, def);
     }
 
