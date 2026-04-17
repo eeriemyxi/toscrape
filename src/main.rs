@@ -1,4 +1,4 @@
-use toscrape::toscrape;
+use toscrape;
 
 fn main() {
     dbg!(toscrape::fetch_book(
