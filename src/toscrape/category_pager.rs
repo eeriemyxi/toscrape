@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use crate::toscrape::{enums::Stock, selectors};
 
 use super::{
@@ -12,6 +14,7 @@ pub struct BookCategoryPager {
     url: Url,
     /// The page to paginate. This property will change when iterated.
     page: u32,
+    buffer: VecDeque<BookCard>,
 }
 
 impl BookCategoryPager {
@@ -23,6 +26,7 @@ impl BookCategoryPager {
                 source: Box::new(e),
             })?,
             page: 0,
+            buffer: VecDeque::new(),
         })
     }
 
@@ -32,10 +36,7 @@ impl BookCategoryPager {
         self
     }
 
-    fn fetch_next_page(
-        &self,
-        page_url: &str,
-    ) -> Result<Vec<BookCard>, ScraperError> {
+    fn fetch_next_page(&self, page_url: &str) -> Result<Vec<BookCard>, ScraperError> {
         let mut books = vec![];
 
         let (curl, body) = fetch_page(page_url)?;
@@ -60,7 +61,8 @@ impl BookCategoryPager {
                 })?
                 .trim();
 
-            let thumbnail_link = self.url
+            let thumbnail_link = self
+                .url
                 .join(thumbnail_src)
                 .map_err(|e| ScraperError::InvalidURL {
                     url: self.url.to_string(),
@@ -89,7 +91,8 @@ impl BookCategoryPager {
                 })?
                 .trim();
 
-            let page_link = self.url
+            let page_link = self
+                .url
                 .join(card_link)
                 .map_err(|e| ScraperError::InvalidURL {
                     url: self.url.to_string(),
@@ -163,9 +166,13 @@ impl BookCategoryPager {
 }
 
 impl Iterator for BookCategoryPager {
-    type Item = Result<Vec<BookCard>, ScraperError>;
+    type Item = Result<BookCard, ScraperError>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        if let Some(book) = self.buffer.pop_front() {
+            return Some(Ok(book));
+        }
+
         let mut url = match Url::parse(self.url.as_ref()) {
             Ok(u) => u,
             Err(e) => {
@@ -196,11 +203,13 @@ impl Iterator for BookCategoryPager {
         let result = self.fetch_next_page(url.as_str());
 
         match result {
-            Err(ScraperError::PageNotFound { url: _ }) => None,
-            _ => {
+            Ok(r) => {
                 self.page += 1;
-                Some(result)
+                self.buffer.extend(r);
+                self.buffer.pop_front().map(Ok)
             }
+            Err(ScraperError::PageNotFound { url: _ }) => None,
+            Err(e) => Some(Err(e)),
         }
     }
 }

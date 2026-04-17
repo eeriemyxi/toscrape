@@ -24,7 +24,8 @@ use toscrape::toscrape;
 fn main() {
     dbg!(toscrape::fetch_book(
         "https://books.toscrape.com/catalogue/a-light-in-the-attic_1000/index.html"
-    ));
+    ))
+    .unwrap();
 }
 ```
 
@@ -33,10 +34,11 @@ fn main() {
 use toscrape::toscrape;
 
 fn main() {
-    dbg!(
+     dbg!(
         toscrape::paginate_category(
             "https://books.toscrape.com/catalogue/category/books/historical_42/index.html"
         )
+        .unwrap()
         .collect::<Vec<_>>()
     );
 }
@@ -55,12 +57,12 @@ use toscrape::toscrape;
 fn main() {
     for category in toscrape::fetch_categories().unwrap() {
         dbg!(&category);
-        for cards in category.pages() {
-            for book in cards {
-                dbg!(&book);
-                dbg!(&book.full());
-            }
+        for book in category.paginate().unwrap() {
+            let book = book.unwrap();
+            dbg!(&book);
+            dbg!(&book.full());
         }
     }
+
 }
 ```
