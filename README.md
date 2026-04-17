@@ -57,12 +57,10 @@ use toscrape::toscrape;
 fn main() {
     for category in toscrape::fetch_categories().unwrap() {
         dbg!(&category);
-        for book in category.paginate().unwrap() {
-            let book = book.unwrap();
+        for book in category.paginate().unwrap().flatten() {
             dbg!(&book);
             dbg!(&book.full());
         }
     }
-
 }
 ```
