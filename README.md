@@ -64,3 +64,25 @@ fn main() {
     }
 }
 ```
+
+#### Thread fetching book cards
+This example uses threads (excl. main thread) to fetch the results faster.
+
+> [!NOTE]
+> This is limited to `BookCard` right now. Extending it to `BookDetails`
+> is yet to be done.
+
+
+```rust
+use toscrape::toscrape;
+
+fn main() {
+    for category in toscrape::fetch_categories().unwrap() {
+        dbg!(&category);
+        for book in category.paginate().unwrap().thread_ahead(5).flatten() {
+            dbg!(&book);
+            dbg!(&book.full());
+        }
+    }
+}
+```
