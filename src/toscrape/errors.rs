@@ -1,4 +1,4 @@
-use hyprcurl::error::CurlError;
+use reqwest::Error;
 use thiserror;
 
 #[derive(thiserror::Error, Debug)]
@@ -14,7 +14,7 @@ pub enum ScraperError {
     },
     /// The given page was invalid
     #[error("encounted error while trying to fetch a page")]
-    InvalidPage(#[from] CurlError),
+    InvalidPage(#[from] Error),
     #[error("Given page not found: `{url}`")]
     /// The given page doesn't exist (404)
     PageNotFound { url: String },

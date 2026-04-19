@@ -2,7 +2,10 @@ use scraper::Html;
 use url::Url;
 
 use super::{
-    ORIGIN_URL, category_pager::BookCategoryPager, errors::ScraperError, fetching::fetch_page,
+    ORIGIN_URL,
+    category_pager::BookCategoryPager,
+    errors::ScraperError,
+    fetching::{fetch_page, get_client},
     selectors,
 };
 
@@ -32,9 +35,9 @@ pub fn fetch_categories() -> Result<Vec<BookCategory>, ScraperError> {
         source: Box::new(e),
     })?;
 
-    let (_, body) = fetch_page(url.as_str())?;
+    let response = fetch_page(get_client(), &url)?;
 
-    for el in Html::parse_document(&body).select(selectors::nav_list()) {
+    for el in Html::parse_document(response.text()?.as_str()).select(selectors::nav_list()) {
         let label = el.text().collect::<String>().trim().to_string();
 
         categories.push(BookCategory {

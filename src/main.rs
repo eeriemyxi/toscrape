@@ -14,7 +14,7 @@ fn main() {
 
     for category in toscrape::fetch_categories().unwrap() {
         dbg!(&category);
-        for book in category.paginate().unwrap().flatten() {
+        for book in category.paginate().unwrap().thread_ahead(3).flatten() {
             dbg!(&book);
             dbg!(&book.full());
         }

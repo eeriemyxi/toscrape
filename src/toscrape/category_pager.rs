@@ -3,7 +3,10 @@ use std::collections::VecDeque;
 use crate::toscrape::{enums::Stock, selectors};
 
 use super::{
-    CURRENCY_SYMBOL, Rating, book_info::BookCard, errors::ScraperError, fetching::fetch_page,
+    CURRENCY_SYMBOL, Rating,
+    book_info::BookCard,
+    errors::ScraperError,
+    fetching::{fetch_page, get_client},
 };
 use scraper::{ElementRef, Html};
 use url::Url;
@@ -36,14 +39,14 @@ impl BookCategoryPager {
     }
 
     fn fetch_next_page(&self, page_url: &str) -> Result<Vec<BookCard>, ScraperError> {
-        let (curl, body) = fetch_page(page_url)?;
-        if curl.response_code()? == 404 {
+        let response = fetch_page(get_client(), page_url)?;
+        if response.status() == 404 {
             return Err(ScraperError::PageNotFound {
                 url: self.url.to_string(),
             });
         }
 
-        Html::parse_document(&body)
+        Html::parse_document(&response.text()?)
             .select(selectors::card())
             .map(|el| self.parse_card(el))
             .collect()
@@ -163,6 +166,24 @@ impl BookCategoryPager {
             stock,
         })
     }
+
+    fn get_page_url_for(&self, page: u32) -> Result<Url, ScraperError> {
+        let mut url = self.url.clone();
+        if page > 0 {
+            let mut segments = match url.path_segments_mut() {
+                Ok(s) => s,
+                Err(_) => {
+                    return Err(ScraperError::InvalidURL {
+                        url: self.url.to_string(),
+                        second: None,
+                        source: "URL didn't have enough path segments".into(),
+                    });
+                }
+            };
+            segments.pop().push(&format!("page-{}.html", page + 1));
+        }
+        Ok(url)
+    }
 }
 
 impl Iterator for BookCategoryPager {
@@ -173,22 +194,12 @@ impl Iterator for BookCategoryPager {
             return Some(Ok(book));
         }
 
-        let mut url = self.url.clone();
-        if self.page > 0 {
-            let mut segments = match url.path_segments_mut() {
-                Ok(s) => s,
-                Err(_) => {
-                    return Some(Err(ScraperError::InvalidURL {
-                        url: self.url.to_string(),
-                        second: None,
-                        source: "URL didn't have enough path segments".into(),
-                    }));
-                }
-            };
-            segments.pop().push(&format!("page-{}.html", self.page + 1));
-        }
+        let page_url = match self.get_page_url_for(self.page) {
+            Ok(u) => u,
+            Err(e) => return Some(Err(e)),
+        };
 
-        let result = self.fetch_next_page(url.as_str());
+        let result = self.fetch_next_page(page_url.as_str());
 
         match result {
             Ok(r) => {

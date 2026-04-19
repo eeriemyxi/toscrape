@@ -4,6 +4,8 @@ use std::collections::HashMap;
 use scraper::Html;
 use url::Url;
 
+use crate::fetching::get_client;
+
 use super::{
     CURRENCY_SYMBOL, Rating,
     enums::{ProductType, Stock},
@@ -73,8 +75,8 @@ impl BookCard {
 
 /// Fetch details for a book via its dedicated page URL.
 pub fn fetch_book(book_url: &str) -> Result<BookDetails, ScraperError> {
-    let (curl, body) = fetch_page(book_url)?;
-    if curl.response_code()? == 404 {
+    let response = fetch_page(get_client(), book_url)?;
+    if response.status() == 404 {
         return Err(ScraperError::PageNotFound {
             url: book_url.to_string(),
         });
@@ -85,7 +87,7 @@ pub fn fetch_book(book_url: &str) -> Result<BookDetails, ScraperError> {
         second: None,
         source: Box::new(e),
     })?;
-    let html = Html::parse_document(&body);
+    let html = Html::parse_document(&response.text()?);
     let root = html.root_element();
 
     let thumbnail_el = root
