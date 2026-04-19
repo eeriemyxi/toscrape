@@ -1,8 +1,8 @@
 # Toscrape
 
-This is a dummy module that scrapes the contents of
-<https://books.toscrape.com>. This library was created as result of me trying to
-learn Rust.
+This is a library to scrape the contents of <https://books.toscrape.com>. This
+library was created as result of me trying to learn Rust. Following the most
+suitable Rust idioms was a core focus.
 
 I've tried experimenting with traits, structs, enums, multithreading, etc., with this project.
 
@@ -14,7 +14,7 @@ If you, for whatever startling reason, desire to use this library,
 cargo add --git https://github.com/eeriemyxi/toscrape.git
 ```
 
-... You could add it as a dependency as shown above.
+... you could add it as a dependency by running this command.
 
 ## Examples
 #### Fetch a specific book
@@ -66,7 +66,8 @@ fn main() {
 ```
 
 #### Thread fetching book cards
-This example uses threads (excl. main thread) to fetch the results faster (via `.thread_ahead` builder option).
+This example uses to fetch the results faster (via `.thread_ahead` builder
+option). `0` means only main thread is used, so `1` would use two threads.
 
 > [!NOTE]
 > This is limited to `BookCard` right now. Extending it to `BookDetails`
