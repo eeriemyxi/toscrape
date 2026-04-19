@@ -4,7 +4,7 @@ This is a dummy module that scrapes the contents of
 <https://books.toscrape.com>. This library was created as result of me trying to
 learn Rust.
 
-I've tried experimenting with traits, structs, enums, etc., with this project.
+I've tried experimenting with traits, structs, enums, multithreading, etc., with this project.
 
 The documentation is generated and deployed automatically at <https://eeriemyxi.github.io/toscrape/>.
 
@@ -66,7 +66,7 @@ fn main() {
 ```
 
 #### Thread fetching book cards
-This example uses threads (excl. main thread) to fetch the results faster.
+This example uses threads (excl. main thread) to fetch the results faster (via `.thread_ahead` builder option).
 
 > [!NOTE]
 > This is limited to `BookCard` right now. Extending it to `BookDetails`

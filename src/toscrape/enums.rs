@@ -49,7 +49,7 @@ impl FromStr for ProductType {
 }
 
 #[derive(Debug)]
-/// Enum for product availability
+/// Enum for product availability.
 pub enum Stock {
     /// The product is in stock.
     InStock {

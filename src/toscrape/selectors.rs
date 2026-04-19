@@ -12,7 +12,6 @@ macro_rules! create_selector {
 }
 
 // Generic selectors
-
 create_selector!(table_head, "th");
 create_selector!(table_def, "td");
 

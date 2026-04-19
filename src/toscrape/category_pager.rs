@@ -23,6 +23,7 @@ enum MessageType {
     NoMorePages { last_page: u32 },
 }
 
+/// Paginator for book categories.
 pub struct BookCategoryPager {
     /// The link to the category.
     url: Url,
@@ -220,6 +221,7 @@ impl BookCategoryPager {
         }
         Ok(url)
     }
+
     fn active_handles_inc(&mut self) {
         if self.thread_ahead != 0 {
             self.active_handles += 1;
@@ -345,7 +347,9 @@ impl Iterator for BookCategoryPager {
     }
 }
 
-/// Paginate product cards via category URL. See [BookCategoryPager::page] to optionally set the page.
+/// Paginate product cards via category URL.
+/// See [BookCategoryPager::page] to optionally set the page.
+/// And [BookCategoryPager::thread_ahead] for faster results.
 pub fn paginate_category(category_url: &str) -> Result<BookCategoryPager, ScraperError> {
     BookCategoryPager::new(category_url)
 }
