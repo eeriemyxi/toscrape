@@ -11,7 +11,7 @@ The documentation is generated and deployed automatically at <https://eeriemyxi.
 If you, for whatever startling reason, desire to use this library, 
 
 ```shell
-cargo add --git https://github.com/eeriemyxi/toscrape.git
+cargo add --git https://github.com/eeriemyxi/toscrape.git toscrape
 ```
 
 ... you could add it as a dependency by running this command.
@@ -19,7 +19,7 @@ cargo add --git https://github.com/eeriemyxi/toscrape.git
 ## Examples
 #### Fetch a specific book
 ```rust
-use toscrape::toscrape;
+use toscrape;
 
 fn main() {
     dbg!(toscrape::fetch_book(
@@ -31,7 +31,7 @@ fn main() {
 
 #### Paginate through a particular category
 ```rust
-use toscrape::toscrape;
+use toscrape;
 
 fn main() {
      dbg!(
@@ -52,7 +52,7 @@ To paginate from a particular page number.
 
 #### Fetch and iterate all categories, then iterate every page, and then iterate every card in each page
 ```rust
-use toscrape::toscrape;
+use toscrape;
 
 fn main() {
     for category in toscrape::fetch_categories().unwrap() {
@@ -74,7 +74,7 @@ option). `0` means only main thread is used, so `1` would use two threads.
 > is yet to be done.
 
 ```rust
-use toscrape::toscrape;
+use toscrape;
 
 fn main() {
     for category in toscrape::fetch_categories().unwrap() {
