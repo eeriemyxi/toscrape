@@ -65,14 +65,13 @@ fn main() {
 }
 ```
 
-#### Thread fetching book cards
-This example uses to fetch the results faster (via `.thread_ahead` builder
+#### Fetching book cards in parallel
+This example uses threads to fetch the results faster (via `.thread_ahead` builder
 option). `0` means only main thread is used, so `1` would use two threads.
 
 > [!NOTE]
 > This is limited to `BookCard` right now. Extending it to `BookDetails`
 > is yet to be done.
-
 
 ```rust
 use toscrape::toscrape;

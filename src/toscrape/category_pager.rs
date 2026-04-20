@@ -78,7 +78,7 @@ impl BookCategoryPager {
         self
     }
 
-    /// Set how many threads to use during pagination. They'll be used to fetch pages parallelly.
+    /// Set how many threads to use during pagination. They'll be used to fetch pages in parallel.
     pub fn thread_ahead(mut self, count: u16) -> Self {
         self.thread_ahead = count;
         self
