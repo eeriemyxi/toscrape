@@ -6,7 +6,7 @@ use url::Url;
 
 use crate::fetching::get_client;
 
-use super::{
+use crate::{
     CURRENCY_SYMBOL, Rating,
     enums::{ProductType, Stock},
     errors::ScraperError,

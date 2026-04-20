@@ -1,0 +1,11 @@
+[package]
+name = "toscrape"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+regex = { workspace = true }
+reqwest = { workspace = true }
+scraper = { workspace = true }
+thiserror = { workspace = true }
+url = { workspace = true }

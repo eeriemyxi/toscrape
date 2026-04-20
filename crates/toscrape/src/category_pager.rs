@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use crate::toscrape::{enums::Stock, selectors};
+use crate::{enums::Stock, selectors};
 
 use super::{
     CURRENCY_SYMBOL, Rating,

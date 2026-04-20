@@ -17,3 +17,8 @@ pub use errors::ScraperError;
 pub const ORIGIN_URL: &str = "https://books.toscrape.com/";
 /// The currency symbol that the scraper trims. Hardly useful but available.
 pub const CURRENCY_SYMBOL: &str = "£";
+
+#[cfg(test)]
+mod tests {
+    
+}
