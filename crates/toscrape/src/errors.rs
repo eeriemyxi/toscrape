@@ -21,12 +21,12 @@ pub enum ScraperError {
     /// Used when something unexpected happens during scraping process.
     InvalidScraping { reason: String },
     #[error("couldn't convert {input} to Rating")]
-    /// Couldn't convert input to a [Rating](crate::enums::Rating).
+    /// Couldn't convert input to a [Rating](crate::Rating).
     InvalidRating { input: String },
-    /// Couldn't convert input to a [ProductType](crate::enums::ProductType).
+    /// Couldn't convert input to a [ProductType](crate::ProductType).
     #[error("couldn't convert {input} to ProductType")]
     InvalidProductType { input: String },
-    /// Couldn't convert input to a [Stock](crate::enums::Stock).
+    /// Couldn't convert input to a [Stock](crate::Stock).
     #[error("couldn't convert {input} to Stock")]
     InvalidStock { input: String },
 }
