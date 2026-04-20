@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use super::{errors::ScraperError, regexes::stock_regex};
+use crate::{errors::ScraperError, regexes::stock_regex};
 
 #[derive(Debug)]
 /// The rating for a product.

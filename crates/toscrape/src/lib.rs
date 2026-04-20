@@ -19,6 +19,4 @@ pub const ORIGIN_URL: &str = "https://books.toscrape.com/";
 pub const CURRENCY_SYMBOL: &str = "£";
 
 #[cfg(test)]
-mod tests {
-    
-}
+mod tests {}

@@ -1,13 +1,14 @@
 use std::collections::VecDeque;
 
-use crate::{enums::Stock, selectors};
-
-use super::{
+use crate::{
     CURRENCY_SYMBOL, Rating,
     book_info::BookCard,
+    enums::Stock,
     errors::ScraperError,
     fetching::{fetch_page, get_client},
+    selectors,
 };
+
 use scraper::{ElementRef, Html};
 use url::Url;
 

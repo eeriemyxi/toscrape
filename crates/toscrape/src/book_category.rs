@@ -1,7 +1,7 @@
 use scraper::Html;
 use url::Url;
 
-use super::{
+use crate::{
     ORIGIN_URL,
     category_pager::BookCategoryPager,
     errors::ScraperError,

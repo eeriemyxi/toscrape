@@ -1,16 +1,13 @@
-use core::f64;
 use std::collections::HashMap;
 
 use scraper::Html;
 use url::Url;
 
-use crate::fetching::get_client;
-
 use crate::{
     CURRENCY_SYMBOL, Rating,
     enums::{ProductType, Stock},
     errors::ScraperError,
-    fetching::fetch_page,
+    fetching::{fetch_page, get_client},
     selectors::{self},
 };
 
